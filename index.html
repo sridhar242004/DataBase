@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Database Concepts</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.158.0/three.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <style>
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .gradient-bg {
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+        .node {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .node.updating {
+            transform: scale(1.2);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+        .connection {
+            position: absolute;
+            height: 2px;
+            background-color: #64748b;
+            transform-origin: left center;
+        }
+        .data-packet {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #4CAF50;
+            border-radius: 50%;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .gif-transparent {
+            background-color: transparent; /* Ensure no background color */
+            border: none;                 /* No border around the GIF */
+        }
+        /* Container for the circular canvas and edge lighting */
+  .gif-container {
+    width: 400px;
+    height: 400px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(255, 255, 255, 0.1); /* Semi-transparent background for better contrast */
+    box-shadow: 0 0 30px rgba(0, 255, 255, 0.5), 0 0 50px rgba(0, 255, 255, 0.3), 0 0 70px rgba(0, 255, 255, 0.2);
+    animation: pulse 2s infinite;
+}
+
+/* Round and responsive GIF styling */
+.gif-inside {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%; /* Ensures the GIF also follows the round shape */
+}
+
+/* Pulse effect for the edge lighting */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 30px rgba(0, 255, 255, 0.5), 0 0 50px rgba(0, 255, 255, 0.3), 0 0 70px rgba(0, 255, 255, 0.2);
+    }
+    50% {
+        box-shadow: 0 0 50px rgba(0, 255, 255, 0.7), 0 0 70px rgba(0, 255, 255, 0.5), 0 0 90px rgba(0, 255, 255, 0.3);
+    }
+    100% {
+        box-shadow: 0 0 30px rgba(0, 255, 255, 0.5), 0 0 50px rgba(0, 255, 255, 0.3), 0 0 70px rgba(0, 255, 255, 0.2);
+    }
+}
+    </style>
+</head>
+<body class="bg-gray-900 text-white overflow-x-hidden">
+    
+    <!-- Hero Section -->
+<section class="relative h-screen gradient-bg overflow-hidden">
+    <div class="absolute inset-0" id="particles"></div>
+
+    <div class="container mx-auto px-6 py-24 relative z-10 h-full flex items-center justify-between">
+        <!-- Content on the left -->
+        <div class="w-full md:w-1/2">
+            <h1 class="text-6xl md:text-8xl font-bold mb-8 text-left leading-tight">
+                Advanced Database
+                <span class="block text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
+                    Concepts Visualized
+                </span>
+            </h1>
+            <p class="text-xl md:text-2xl text-gray-300 mb-12 text-left max-w-lg">
+                Explore real-time simulations of distributed databases, CAP theorem, and advanced data structures
+            </p>
+        </div>
+
+        <!-- Circular Canvas for GIF on the right with edge lighting -->
+        <div class="w-full md:w-1/2 flex justify-center items-center">
+            <div class="gif-container">
+                <img src="36882wired1.gif" alt="Advanced Database Concepts" class="gif-inside">
+            </div>
+        </div>
+    </div>
+</section>
+    
+
+    <!-- CAP Theorem Interactive Section -->
+    <section class="py-24 bg-gray-800">
+        <div class="container mx-auto px-6">
+            <h2 class="text-4xl md:text-5xl font-bold mb-16 text-center">CAP Theorem Visualized</h2>
+            <div class="relative h-[600px]" id="cap-visualization">
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <div id="nodes-container" class="relative w-full h-full"></div>
+                </div>
+                <div class="absolute bottom-4 left-4 flex space-x-4">
+                    <button id="partition-btn" class="bg-red-500 hover:bg-red-600 px-6 py-2 rounded-lg">Simulate Network Partition</button>
+                    <button id="heal-btn" class="bg-green-500 hover:bg-green-600 px-6 py-2 rounded-lg hidden">Heal Network</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Data Replication Simulator -->
+    <section class="py-24 bg-gray-900">
+        <div class="container mx-auto px-6">
+            <h2 class="text-4xl md:text-5xl font-bold mb-16 text-center">Real-time Data Replication</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-16">
+                <div class="glass-effect rounded-xl p-8">
+                    <h3 class="text-2xl font-bold mb-6">Replication Simulator</h3>
+                    <div class="h-64 bg-gray-800 rounded-lg mb-6 relative" id="replication-simulator"></div>
+                    <div class="flex justify-center gap-4">
+                        <button id="start-replication" class="bg-blue-500 hover:bg-blue-600 px-6 py-2 rounded-lg">Start Replication</button>
+                        <button id="stop-replication" class="bg-red-500 hover:bg-red-600 px-6 py-2 rounded-lg">Stop Replication</button>
+                    </div>
+                </div>
+                <div class="glass-effect rounded-xl p-8">
+                    <h3 class="text-2xl font-bold mb-6">Replication Metrics</h3>
+                    <div id="replication-metrics" class="space-y-4">
+                        <div class="flex justify-between">
+                            <span>Replication Lag:</span>
+                            <span id="replication-lag">0ms</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Data Consistency:</span>
+                            <span id="consistency-status">100%</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Network Health:</span>
+                            <span id="network-health">Optimal</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Sharding Visualization -->
+    <section class="py-24 bg-gray-800">
+        <div class="container mx-auto px-6">
+            <h2 class="text-4xl md:text-5xl font-bold mb-16 text-center">Database Sharding</h2>
+            <div class="glass-effect rounded-xl p-8">
+                <div class="h-96 relative" id="sharding-visualization">
+                    <div id="data-input" class="absolute top-4 left-4 flex space-x-4">
+                        <input type="text" id="shard-data-input" placeholder="Enter data" class="px-4 py-2 rounded-lg bg-gray-700 text-white">
+                        <button id="add-data" class="bg-blue-500 hover:bg-blue-600 px-6 py-2 rounded-lg">Add Data</button>
+                    </div>
+                    <div id="shards-container" class="grid grid-cols-3 gap-4 mt-16"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // Initialize GSAP
+        gsap.registerPlugin(ScrollTrigger);
+
+        // Particle system setup
+        let scene, camera, renderer, particles;
+
+        function initThreeJS() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('particles').appendChild(renderer.domElement);
+
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+
+            for (let i = 0; i < 5000; i++) {
+                vertices.push(
+                    Math.random() * 2000 - 1000,
+                    Math.random() * 2000 - 1000,
+                    Math.random() * 2000 - 1000
+                );
+            }
+
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            const material = new THREE.PointsMaterial({ color: 0xffffff, size: 2 });
+            particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+            camera.position.z = 1000;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            particles.rotation.x += 0.0005;
+            particles.rotation.y += 0.0005;
+            renderer.render(scene, camera);
+        }
+
+        // CAP Theorem Visualization
+        class CapNode {
+            constructor(x, y, label) {
+                this.x = x;
+                this.y = y;
+                this.label = label;
+                this.connected = true;
+                this.data = { value: 0 };
+                this.element = document.createElement('div');
+                this.element.className = 'node bg-blue-500 absolute';
+                this.element.style.left = `${x}px`;
+                this.element.style.top = `${y}px`;
+                this.element.textContent = label;
+            }
+
+            updateData(newData) {
+                if (this.connected) {
+                    this.data = { ...newData };
+                    this.element.classList.add('updating');
+                    setTimeout(() => this.element.classList.remove('updating'), 500);
+                }
+            }
+        }
+
+        class CapVisualizer {
+            constructor() {
+                this.container = document.getElementById('nodes-container');
+                this.nodes = [];
+                this.connections = [];
+                this.init();
+            }
+
+            init() {
+                const nodePositions = [
+                    { x: 200, y: 100, label: 'Node A' },
+                    { x: 400, y: 100, label: 'Node B' },
+                    { x: 300, y: 300, label: 'Node C' }
+                ];
+
+                nodePositions.forEach(pos => {
+                    const node = new CapNode(pos.x, pos.y, pos.label);
+                    this.container.appendChild(node.element);
+                    this.nodes.push(node);
+                });
+
+                this.createConnections();
+            }
+
+            createConnections() {
+                for (let i = 0; i < this.nodes.length; i++) {
+                    for (let j = i + 1; j < this.nodes.length; j++) {
+                        this.createConnection(this.nodes[i], this.nodes[j]);
+                    }
+                }
+            }
+
+            createConnection(node1, node2) {
+                const connection = document.createElement('div');
+                connection.className = 'connection absolute';
+                this.container.appendChild(connection);
+                this.connections.push({ element: connection, node1, node2 });
+                this.updateConnection(connection, node1, node2);
+            }
+
+            updateConnection(connection, node1, node2) {
+                const x1 = node1.x + 30;
+                const y1 = node1.y + 30;
+                const x2 = node2.x + 30;
+                const y2 = node2.y + 30;
+
+                const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+                const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+
+                connection.style.width = `${length}px`;
+                connection.style.left = `${x1}px`;
+                connection.style.top = `${y1}px`;
+                connection.style.transform = `rotate(${angle}deg)`;
+            }
+
+            simulateNetworkPartition() {
+                this.nodes[1].connected = false;
+                this.nodes[1].element.classList.add('bg-red-500');
+                this.connections.forEach(conn => {
+                    if (conn.node1 === this.nodes[1] || conn.node2 === this.nodes[1]) {
+                        conn.element.style.backgroundColor = '#EF4444';
+                    }
+                });
+            }
+
+            healNetwork() {
+                this.nodes[1].connected = true;
+                this.nodes[1].element.classList.remove('bg-red-500');
+                this.connections.forEach(conn => {
+                    conn.element.style.backgroundColor = '#64748b';
+                });
+            }
+        }
+
+        // Replication Simulator
+        class ReplicationSimulator {
+            constructor() {
+                this.container = document.getElementById('replication-simulator');
+                this.nodes = [];
+                this.isRunning = false;
+                this.replicationInterval = null;
+                this.init();
+            }
+
+            init() {
+                const nodePositions = [
+                    { x: 50, y: 50, label: 'Primary' },
+                    { x: 150, y: 50, label: 'Secondary 1' },
+                    { x: 250, y: 50, label: 'Secondary 2' }
+                ];
+
+                nodePositions.forEach(pos => {
+                    const node = new CapNode(pos.x, pos.y, pos.label);
+                    this.container.appendChild(node.element);
+                    this.nodes.push(node);
+                });
+            }
+
+            startReplication() {
+                if (!this.isRunning) {
+                    this.isRunning = true;
+                    this.replicationInterval = setInterval(() => this.replicateData(), 2000);
+                }
+            }
+
+            stopReplication() {
+                if (this.isRunning) {
+                    this.isRunning = false;
+                    clearInterval(this.replicationInterval);
+                }
+            }
+
+            replicateData() {
+                const newData = { value: Math.floor(Math.random() * 100) };
+                this.nodes[0].updateData(newData);
+
+                setTimeout(() => this.nodes[1].updateData(newData), 500);
+                setTimeout(() => this.nodes[2].updateData(newData), 1000);
+
+                this.updateMetrics();
+            }
+
+            updateMetrics() {
+                document.getElementById('replication-lag').textContent = '500ms';
+                document.getElementById('consistency-status').textContent = 
+                    this.nodes.every(node => node.data.value === this.nodes[0].data.value) ? '100%' : 'Syncing...';
+                document.getElementById('network-health').textContent = 'Optimal';
+            }
+        }
+
+        // Sharding Visualization
+        class ShardingVisualizer {
+            constructor() {
+                this.container = document.getElementById('shards-container');
+                this.shards = [];
+                this.init();
+            }
+
+            init() {
+                for (let i = 0; i < 3; i++) {
+                    const shard = document.createElement('div');
+                    shard.className = 'bg-gray-700 rounded-lg p-4 h-64 overflow-y-auto';
+                    shard.innerHTML = `
+                        <h4 class="text-lg font-bold mb-2">Shard ${i + 1}</h4>
+                        <div class="shard-data space-y-2"></div>
+                    `;
+                    this.container.appendChild(shard);
+                    this.shards.push(shard.querySelector('.shard-data'));
+                }
+            }
+
+            addData(data) {
+                const shardIndex = this.getShardIndex(data);
+                const dataElement = document.createElement('div');
+                dataElement.className = 'bg-gray-600 rounded p-2 text-sm';
+                dataElement.textContent = data;
+                
+                gsap.from(dataElement, {
+                    opacity: 0,
+                    y: 20,
+                    duration: 0.5
+                });
+                
+                this.shards[shardIndex].appendChild(dataElement);
+            }
+
+            getShardIndex(data) {
+                // Simple hash function for demo purposes
+                const hash = data.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                return hash % this.shards.length;
+            }
+        }
+
+        // Initialize all visualizations when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize Three.js particles
+            initThreeJS();
+            animate();
+
+            // Initialize CAP Theorem visualization
+            const capViz = new CapVisualizer();
+            const partitionBtn = document.getElementById('partition-btn');
+            const healBtn = document.getElementById('heal-btn');
+
+            partitionBtn.addEventListener('click', () => {
+                capViz.simulateNetworkPartition();
+                partitionBtn.classList.add('hidden');
+                healBtn.classList.remove('hidden');
+            });
+
+            healBtn.addEventListener('click', () => {
+                capViz.healNetwork();
+                healBtn.classList.add('hidden');
+                partitionBtn.classList.remove('hidden');
+            });
+
+            // Initialize Replication Simulator
+            const replicationSim = new ReplicationSimulator();
+            document.getElementById('start-replication').addEventListener('click', () => replicationSim.startReplication());
+            document.getElementById('stop-replication').addEventListener('click', () => replicationSim.stopReplication());
+
+            // Initialize Sharding Visualizer
+            const shardingViz = new ShardingVisualizer();
+            const addDataBtn = document.getElementById('add-data');
+            const dataInput = document.getElementById('shard-data-input');
+
+            addDataBtn.addEventListener('click', () => {
+                const data = dataInput.value.trim();
+                if (data) {
+                    shardingViz.addData(data);
+                    dataInput.value = '';
+                }
+            });
+
+            dataInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    addDataBtn.click();
+                }
+            });
+
+            // GSAP Animations for sections
+            gsap.utils.toArray('section').forEach((section, i) => {
+                gsap.from(section, {
+                    scrollTrigger: {
+                        trigger: section,
+                        start: "top center",
+                        toggleActions: "play none none reverse"
+                    },
+                    y: 100,
+                    opacity: 0,
+                    duration: 1,
+                    ease: "power2.out"
+                });
+            });
+        });
+
+        // Window resize handler
+        window.addEventListener('resize', () => {
+            // Update Three.js renderer
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
